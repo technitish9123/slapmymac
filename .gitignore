@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+DerivedData/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# SwiftPM binary artifacts
+.artifacts/
+
+# User-specific files
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Application files
+SlapMyMac.app/
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# Other
+*.orig
+*.rej

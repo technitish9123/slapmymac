@@ -1,0 +1,11 @@
+{
+    "id": "Pain",
+    "name": "Pain",
+    "icon": "face.dashed",
+    "description": "Ow! Ouch! That hurts!",
+    "files": [
+        "00_Ow.mp3", "01_Ouch.mp3", "02_Owwie.mp3", "03_Hey_that_hurts.mp3",
+        "04_Ow_stop_it.mp3", "05_What_was_that_for.mp3", "06_Ow_ow_ow.mp3",
+        "07_Hey.mp3", "08_Yowch.mp3", "09_That_stings.mp3"
+    ]
+}

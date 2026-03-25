@@ -1,0 +1,10 @@
+{
+    "id": "Halo",
+    "name": "Halo",
+    "icon": "shield.lefthalf.filled",
+    "description": "Halo death sound effects",
+    "files": [
+        "00.mp3", "01.mp3", "02.mp3", "03.mp3", "04.mp3",
+        "05.mp3", "06.mp3", "07.mp3", "08.mp3"
+    ]
+}
