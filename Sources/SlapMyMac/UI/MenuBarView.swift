@@ -16,9 +16,9 @@ private enum Theme {
     static let violet = Color(red: 0.65, green: 0.72, blue: 0.25)          // Lighter olive hover
     static let enabledGreen = Color(red: 0.55, green: 0.72, blue: 0.20)    // Bright olive green
     static let warmTint = Color(red: 0.12, green: 0.13, blue: 0.10)        // Dark earthy bg
-    static let cardFill = Color.white.opacity(0.06)
-    static let cardBorder = Color.white.opacity(0.08)
-    static let subtleShadow = Color.black.opacity(0.4)
+    static let cardFill = Color.white.opacity(0.04)
+    static let cardBorder = Color.white.opacity(0.06)
+    static let subtleShadow = Color.black.opacity(0.2)
 
     static let sliderBlue = Color(red: 0.55, green: 0.62, blue: 0.18)      // Olive for sensitivity
     static let sliderGreen = Color(red: 0.55, green: 0.72, blue: 0.20)     // Green for volume
@@ -46,6 +46,9 @@ struct MenuBarView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Theme.sectionSpacing) {
+                // Extra top padding for native titlebar / traffic lights
+                Color.clear.frame(height: 8)
+
                 headerSection
                 liveFeedbackCard
                 soundPackSection
@@ -53,13 +56,10 @@ struct MenuBarView: View {
                 togglesSection
                 footerSection
             }
-            .padding(.vertical, 18)
+            .padding(.vertical, 12)
         }
-        .frame(width: Theme.panelWidth)
-        .frame(maxHeight: 975)
-        .background(panelBackground)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-        .shadow(color: Theme.subtleShadow, radius: 20, x: 0, y: 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
         .preferredColorScheme(.dark)
         .onAppear {
             appState.initialize()
