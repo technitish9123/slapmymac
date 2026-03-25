@@ -1,56 +1,67 @@
 #!/usr/bin/env bash
-# Generate AppIcon.icns for SlapMyMac
+# Generate AppIcon.icns for SlapMyMac using Swift
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ICONSET_DIR="${SCRIPT_DIR}/AppIcon.iconset"
 ICNS_FILE="${SCRIPT_DIR}/AppIcon.icns"
 ICON_1024="/tmp/slapmac_icon_1024.png"
+SWIFT_GEN="/tmp/slapmac_icongen.swift"
 
 echo "==> Generating app icon..."
 
-# Create icon using AppKit (native macOS)
-python3 -c "
-from AppKit import NSImage, NSColor, NSBezierPath, NSFont, NSString, NSMakeRect, NSGraphicsContext, NSBitmapImageRep
-import Foundation
+cat > "${SWIFT_GEN}" <<'SWIFTEOF'
+import AppKit
 
-size = 1024
-img = NSImage.alloc().initWithSize_((size, size))
+let size: CGFloat = 1024
+let img = NSImage(size: NSSize(width: size, height: size))
 img.lockFocus()
 
-# Olive green background
-path = NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(NSMakeRect(0, 0, size, size), 200, 200)
-NSColor.colorWithRed_green_blue_alpha_(0.29, 0.35, 0.12, 1.0).setFill()
-path.fill()
+// Olive green gradient background
+let bg = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: size, height: size), xRadius: 200, yRadius: 200)
+let gradient = NSGradient(colors: [
+    NSColor(red: 0.22, green: 0.28, blue: 0.08, alpha: 1),
+    NSColor(red: 0.32, green: 0.40, blue: 0.14, alpha: 1)
+])!
+gradient.draw(in: bg, angle: -45)
 
-# Inner border glow
-inner = NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(NSMakeRect(20, 20, size-40, size-40), 190, 190)
-NSColor.colorWithRed_green_blue_alpha_(0.55, 0.62, 0.18, 0.3).setStroke()
-inner.setLineWidth_(3)
+// Inner glow border
+let inner = NSBezierPath(roundedRect: NSRect(x: 8, y: 8, width: size - 16, height: size - 16), xRadius: 196, yRadius: 196)
+NSColor(red: 0.55, green: 0.62, blue: 0.18, alpha: 0.25).setStroke()
+inner.lineWidth = 4
 inner.stroke()
 
-# Hand emoji
-attrs = {
-    'NSFont': NSFont.systemFontOfSize_(450),
-}
-s = NSString.stringWithString_('\\U0001f91a')
-s.drawAtPoint_withAttributes_((230, 250), attrs)
+// Hand emoji
+let handAttrs: [NSAttributedString.Key: Any] = [
+    .font: NSFont.systemFont(ofSize: 480)
+]
+let hand = NSAttributedString(string: "\u{1F91A}", attributes: handAttrs)
+hand.draw(at: NSPoint(x: 210, y: 220))
 
-# SLAP! text
-attrs2 = {
-    'NSFont': NSFont.boldSystemFontOfSize_(110),
-    'NSColor': NSColor.colorWithRed_green_blue_alpha_(0.78, 0.85, 0.29, 1.0),
-}
-s2 = NSString.stringWithString_('SLAP!')
-s2.drawAtPoint_withAttributes_((290, 70), attrs2)
+// "SLAP!" text
+let textAttrs: [NSAttributedString.Key: Any] = [
+    .font: NSFont.boldSystemFont(ofSize: 120),
+    .foregroundColor: NSColor(red: 0.78, green: 0.85, blue: 0.29, alpha: 1.0)
+]
+let slap = NSAttributedString(string: "SLAP!", attributes: textAttrs)
+slap.draw(at: NSPoint(x: 265, y: 50))
 
 img.unlockFocus()
 
-rep = NSBitmapImageRep.imageRepWithData_(img.TIFFRepresentation())
-data = rep.representationUsingType_properties_(4, {})
-data.writeToFile_atomically_('${ICON_1024}', True)
-print('Created icon')
-"
+guard let tiff = img.tiffRepresentation,
+      let rep = NSBitmapImageRep(data: tiff),
+      let png = rep.representation(using: .png, properties: [:]) else {
+    print("ERROR: Failed to generate PNG")
+    exit(1)
+}
+
+let url = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "/tmp/slapmac_icon_1024.png")
+try! png.write(to: url)
+print("Created icon at \(url.path)")
+SWIFTEOF
+
+swiftc "${SWIFT_GEN}" -framework AppKit -o /tmp/slapmac_icongen
+/tmp/slapmac_icongen "${ICON_1024}"
 
 if [ ! -f "$ICON_1024" ]; then
     echo "ERROR: Could not create icon PNG"

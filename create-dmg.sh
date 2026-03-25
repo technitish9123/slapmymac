@@ -96,78 +96,86 @@ echo "    ✓ App bundle created"
 # ── Step 4: Create DMG background ──
 echo "==> Creating DMG background..."
 BG_PATH="/tmp/slapmac_dmg_bg.png"
+BG_SWIFT="/tmp/slapmac_dmg_bg.swift"
 
-python3 -c "
-from AppKit import (NSImage, NSColor, NSBezierPath, NSFont, NSString,
-                    NSMakeRect, NSBitmapImageRep, NSFontManager,
-                    NSMakePoint, NSGradient)
-import Foundation
+cat > "${BG_SWIFT}" <<'BGSWIFT'
+import AppKit
 
-W, H = 660, 400
-img = NSImage.alloc().initWithSize_((W, H))
+let W: CGFloat = 660
+let H: CGFloat = 400
+let img = NSImage(size: NSSize(width: W, height: H))
 img.lockFocus()
 
-# Dark earthy gradient background
-grad = NSGradient.alloc().initWithColors_([
-    NSColor.colorWithRed_green_blue_alpha_(0.10, 0.12, 0.08, 1.0),
-    NSColor.colorWithRed_green_blue_alpha_(0.16, 0.18, 0.12, 1.0),
-])
-grad.drawInRect_angle_(NSMakeRect(0, 0, W, H), 90)
+// Dark earthy gradient
+let grad = NSGradient(colors: [
+    NSColor(red: 0.10, green: 0.12, blue: 0.08, alpha: 1),
+    NSColor(red: 0.16, green: 0.18, blue: 0.12, alpha: 1)
+])!
+grad.draw(in: NSRect(x: 0, y: 0, width: W, height: H), angle: 90)
 
-# Subtle grid lines
-NSColor.colorWithRed_green_blue_alpha_(0.25, 0.30, 0.15, 0.1).setStroke()
-for x in range(0, W, 40):
-    p = NSBezierPath.bezierPath()
-    p.moveToPoint_((x, 0))
-    p.lineToPoint_((x, H))
-    p.setLineWidth_(0.5)
+// Subtle grid
+NSColor(red: 0.25, green: 0.30, blue: 0.15, alpha: 0.1).setStroke()
+for x in stride(from: 0, to: Int(W), by: 40) {
+    let p = NSBezierPath()
+    p.move(to: NSPoint(x: x, y: 0))
+    p.line(to: NSPoint(x: x, y: Int(H)))
+    p.lineWidth = 0.5
     p.stroke()
-for y in range(0, H, 40):
-    p = NSBezierPath.bezierPath()
-    p.moveToPoint_((0, y))
-    p.lineToPoint_((W, y))
-    p.setLineWidth_(0.5)
+}
+for y in stride(from: 0, to: Int(H), by: 40) {
+    let p = NSBezierPath()
+    p.move(to: NSPoint(x: 0, y: y))
+    p.line(to: NSPoint(x: Int(W), y: y))
+    p.lineWidth = 0.5
     p.stroke()
+}
 
-# Arrow pointing right
-NSColor.colorWithRed_green_blue_alpha_(0.55, 0.62, 0.18, 0.6).setFill()
-arrow = NSBezierPath.bezierPath()
-# Arrow body
-arrow.moveToPoint_((260, 140))
-arrow.lineToPoint_((360, 140))
-arrow.lineToPoint_((360, 120))
-arrow.lineToPoint_((400, 155))
-arrow.lineToPoint_((360, 190))
-arrow.lineToPoint_((360, 170))
-arrow.lineToPoint_((260, 170))
-arrow.closePath()
+// Arrow
+NSColor(red: 0.55, green: 0.62, blue: 0.18, alpha: 0.6).setFill()
+let arrow = NSBezierPath()
+arrow.move(to: NSPoint(x: 260, y: 140))
+arrow.line(to: NSPoint(x: 360, y: 140))
+arrow.line(to: NSPoint(x: 360, y: 120))
+arrow.line(to: NSPoint(x: 400, y: 155))
+arrow.line(to: NSPoint(x: 360, y: 190))
+arrow.line(to: NSPoint(x: 360, y: 170))
+arrow.line(to: NSPoint(x: 260, y: 170))
+arrow.close()
 arrow.fill()
 
-# Title text
-attrs = {
-    'NSFont': NSFont.boldSystemFontOfSize_(16),
-    'NSColor': NSColor.colorWithRed_green_blue_alpha_(0.78, 0.85, 0.29, 0.9),
-}
-s = NSString.stringWithString_('Drag SlapMyMac to Applications')
-s.drawAtPoint_withAttributes_((180, 80), attrs)
+// Title
+let attrs: [NSAttributedString.Key: Any] = [
+    .font: NSFont.boldSystemFont(ofSize: 16),
+    .foregroundColor: NSColor(red: 0.78, green: 0.85, blue: 0.29, alpha: 0.9)
+]
+NSAttributedString(string: "Drag SlapMyMac to Applications", attributes: attrs)
+    .draw(at: NSPoint(x: 180, y: 80))
 
-# Subtitle
-attrs2 = {
-    'NSFont': NSFont.systemFontOfSize_(11),
-    'NSColor': NSColor.colorWithRed_green_blue_alpha_(1.0, 1.0, 1.0, 0.4),
-}
-s2 = NSString.stringWithString_('Requires macOS 14+ with Apple Silicon')
-s2.drawAtPoint_withAttributes_((210, 55), attrs2)
+// Subtitle
+let attrs2: [NSAttributedString.Key: Any] = [
+    .font: NSFont.systemFont(ofSize: 11),
+    .foregroundColor: NSColor(red: 1, green: 1, blue: 1, alpha: 0.4)
+]
+NSAttributedString(string: "Requires macOS 14+ with Apple Silicon", attributes: attrs2)
+    .draw(at: NSPoint(x: 210, y: 55))
 
 img.unlockFocus()
 
-rep = NSBitmapImageRep.imageRepWithData_(img.TIFFRepresentation())
-data = rep.representationUsingType_properties_(4, {})
-data.writeToFile_atomically_('${BG_PATH}', True)
-print('    Created DMG background')
-"
+guard let tiff = img.tiffRepresentation,
+      let rep = NSBitmapImageRep(data: tiff),
+      let png = rep.representation(using: .png, properties: [:]) else { exit(1) }
 
-# ── Step 5: Create DMG staging area ──
+let path = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "/tmp/slapmac_dmg_bg.png"
+try! png.write(to: URL(fileURLWithPath: path))
+print("    Created DMG background")
+BGSWIFT
+
+swiftc "${BG_SWIFT}" -framework AppKit -o /tmp/slapmac_bggen
+/tmp/slapmac_bggen "${BG_PATH}"
+
+# (old python block removed - using Swift above)
+
+# ── Step 5: Create DMG directly ──
 echo "==> Staging DMG contents..."
 rm -rf "${DMG_DIR}"
 mkdir -p "${DMG_DIR}"
@@ -178,76 +186,17 @@ cp -R "${APP_BUNDLE}" "${DMG_DIR}/"
 # Create Applications symlink
 ln -s /Applications "${DMG_DIR}/Applications"
 
-# Copy background
-mkdir -p "${DMG_DIR}/.background"
-if [ -f "${BG_PATH}" ]; then
-    cp "${BG_PATH}" "${DMG_DIR}/.background/background.png"
-fi
-
-# ── Step 6: Create DMG ──
+# ── Step 6: Create compressed DMG ──
 echo "==> Creating DMG..."
-rm -f "${DMG_TEMP}" "${DMG_FINAL}"
+rm -f "${DMG_FINAL}"
 
-# Create temporary writable DMG
 hdiutil create \
     -srcfolder "${DMG_DIR}" \
     -volname "${APP_NAME}" \
     -fs HFS+ \
-    -fsargs "-c c=64,a=16,e=16" \
-    -format UDRW \
-    -size 200m \
-    "${DMG_TEMP}" \
-    -quiet
-
-# Mount it
-MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "${DMG_TEMP}" -quiet | grep "/Volumes/" | sed 's/.*\/Volumes/\/Volumes/')
-echo "    Mounted at: ${MOUNT_DIR}"
-
-# Wait for mount
-sleep 2
-
-# Apply visual settings via AppleScript
-echo "==> Configuring DMG window appearance..."
-osascript <<APPLESCRIPT
-tell application "Finder"
-    tell disk "${APP_NAME}"
-        open
-        set current view of container window to icon view
-        set toolbar visible of container window to false
-        set statusbar visible of container window to false
-        set the bounds of container window to {100, 100, 760, 500}
-        set viewOptions to the icon view options of container window
-        set arrangement of viewOptions to not arranged
-        set icon size of viewOptions to 100
-        try
-            set background picture of viewOptions to file ".background:background.png"
-        end try
-        set position of item "${APP_NAME}.app" of container window to {170, 200}
-        set position of item "Applications" of container window to {490, 200}
-        close
-        open
-        update without registering applications
-        delay 2
-        close
-    end tell
-end tell
-APPLESCRIPT
-
-# Ensure changes are flushed
-sync
-
-# Unmount
-hdiutil detach "${MOUNT_DIR}" -quiet
-
-# Convert to compressed read-only DMG
-echo "==> Compressing DMG..."
-hdiutil convert "${DMG_TEMP}" \
     -format UDZO \
     -imagekey zlib-level=9 \
-    -o "${DMG_FINAL}" \
-    -quiet
-
-rm -f "${DMG_TEMP}"
+    "${DMG_FINAL}"
 
 # ── Step 7: Cleanup ──
 rm -rf "${DMG_DIR}"
